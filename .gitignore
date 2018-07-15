@@ -2,6 +2,12 @@
 .Rhistory
 .Rapp.history
 
+# add other exclusions 
+*.csv
+*.xlsx
+*.rda
+*.RData
+
 # Session Data files
 .RData
 
