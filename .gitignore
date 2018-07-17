@@ -8,6 +8,9 @@
 *.rda
 *.RData
 
+# remove anything in the data folder
+data/*
+
 # Session Data files
 .RData
 

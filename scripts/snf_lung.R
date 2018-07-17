@@ -6,8 +6,11 @@ library(readr)
 library(cluster)
 library(analogue)
 
+# source functions
+source('functions.R')
+
 # read in data 
-temp_dat <- read.csv('lung_data.csv', 
+temp_dat <- read.csv('../data/lung_data.csv', 
                      na.strings = c("777", NA), 
                      stringsAsFactors = FALSE)
 
@@ -38,13 +41,52 @@ temp_dat$lbf_6m_status <- ifelse(temp_dat$lbf_6m_status == '', NA,
 rownames(temp_dat) <- temp_dat$subjectnumber
 temp_dat$subjectnumber <- temp_dat$subjecttype <- NULL
 
+# implement funciton that combines hospital and er visits into one column
+# then remove the variables used
+
+# for 3m 
+temp_dat$any_hos_3m <- combine_with_sum(temp_dat$numer_3m, temp_dat$numhos_3m)
+temp_dat$numer_3m <- temp_dat$numhos_3m <- NULL
+
+# for 6m 
+temp_dat$any_hos_6m <- combine_with_sum(temp_dat$numer_6m, temp_dat$numhos_6m)
+temp_dat$numer_6m <- temp_dat$numhos_6m <- NULL
+
+# for 12m 
+temp_dat$any_hos_12m <- combine_with_sum(temp_dat$numer_12m, temp_dat$numhos_12m)
+temp_dat$numer_12m <- temp_dat$numhos_12m <- NULL
+
+# for 18m 
+temp_dat$any_hos_18m <- combine_with_sum(temp_dat$numer_18m, temp_dat$numhos_18m)
+temp_dat$numer_18m <- temp_dat$numhos_18m <- NULL
+
+# for 24m 
+temp_dat$any_hos_24m <- combine_with_sum(temp_dat$numer_24m, temp_dat$numhos_24m)
+temp_dat$numer_24m <- temp_dat$numhos_24m <- NULL
+
+# for 30m 
+temp_dat$any_hos_30m <- combine_with_sum(temp_dat$numer_30m, temp_dat$numhos_30m)
+temp_dat$numer_30m <- temp_dat$numhos_30m <- NULL
+
+# for 36m 
+temp_dat$any_hos_36m <- combine_with_sum(temp_dat$numer_36m, temp_dat$numhos_36m)
+temp_dat$numer_36m <- temp_dat$numhos_36m <- NULL
+
+
+# impute on time series trajectories using mean or splines
+temp_data <- temp_dat
+# column trajectories: num_
+impute_trajectory <- function(temp_data){
+  
+}
+
 # create group vector to merge to column names
 group_vector <- c('group_1_binary', 'group_1', 'group_1', 'group_1', 'group_1', 'group_1', 'group_1', 
                   'group_1', 'group_1', 'group_1', 'group_1', 'group_1', 'group_1', 'group_1_binary', 'group_1_binary', 
                   'group_2', 'group_2', 'group_2', 'group_2', 'group_2', 'group_2_binary', 'group_2', 'group_2', 
                   'group_2_factor', 'group_2_factor', 
-                  'group_3', 'group_3', 'group_3', 'group_3', 'group_3', 'group_3', 'group_3', 'group_3', 
-                  'group_3', 'group_3',  'group_3', 'group_3', 'group_3', 'group_3', 
+                  'group_3', 'group_3', 'group_3', 'group_3', 'group_3', 'group_3', 'group_3', 
+                  
                   'group_4_binary', 'group_4_binary', 'group_4_binary', 'group_4_binary', 'group_4_binary', 
                   'group_4_binary', 'group_4_binary', 'group_4_binary', 
                   'group_5', 'group_5', 'group_5', 'group_5', 'group_5', 'group_5', 'group_5', 
@@ -67,7 +109,7 @@ colnames(temp_cols)[1] <- 'percent_missing'
 rownames(temp_cols) <- NULL
 
 # save data and manually enter data groups
-write_csv(temp_cols, 'variable_percent_missing.csv')
+write_csv(temp_cols, '../data/variable_percent_missing.csv')
 
 # remove columns with over 30% missing
 temp_30 <- temp_cols$variable[temp_cols$percent_missing < .41]
@@ -102,11 +144,7 @@ for(i in 1:length(unique_groups)){
 #                             wheeze_1y = temp_dat$wheeze1y_group_6_binary, wheeze_2hy = temp_dat$wheeze2hy_group_6_binary,
 #                             wheez_3y = temp_dat$wheeze3y_group_6_binary))
 
-# HERE- remember if the factor is only one level (like gender) then maybe you can just code it as 0 and 1 numeric - the only non binary facotrs are lbf_3m, lbf_6m
-# HERE- anytime there is an ER visit, does that emply hospitalization? 
-# HERE - how many layers can SNF handle
-# HERE - look at recurrent wheeze and its relationship to normal wheeze
-# HERE - Normalize across datatype? Gender, survey, etc. Test for variance.
+
 
 
 # plot the distribution of NA
@@ -137,47 +175,6 @@ for(i in 1:length(unique_groups)){
 ###### 
 # implement SNF
 ######
-data <- data_list
-# create a list of data frames based on the types of data 
-# maybe observable clinical data and numerical data
-SNFClustering <- function(data, 
-                          numClus = 4, 
-                          sampleRows = TRUE,
-                          dist_type) {
-  # Transpose data for the dist function
-  # The dist function takes distances between rows
-  sampleRowsRequired <- TRUE
-  transposeData <- sampleRows != sampleRowsRequired
-  if (transposeData) {
-    data <- lapply(data, t)
-  }
-  
-  # Calculate the distance between samples
-  if(dist_type == 'normal') {
-    distances <- lapply(data, function(x) as.matrix(dist(x)))
-  } 
-  if (dist_type == 'daisy') {
-    distances <- lapply(data, function(x) as.matrix(daisy(x, metric = 'gower')))
-  } 
-  
-  # Convert the distances to affinities
-  affinities <- lapply(distances, affinityMatrix)
-  
-  # Fuse the affinity matrices
-  fusedMatrix <- SNF(affinities)
-  
-  # Cluster the fused matrix
-  labels <- spectralClustering(fusedMatrix, numClus)
-  
-  # cbind data to create a final data frame with corresponding cluster labels
-  final_data <- do.call('cbind', data)
-
-  # add a column to data for the labels
-  final_data$clustering_label <- labels
-  
-  return(final_data)
-}
-
 # run SNF using normal distance function
 final_data <- SNFClustering(data = data_list, 
                             numClus = 4, 
@@ -191,3 +188,6 @@ final_data_daisy <- SNFClustering(data = data_list,
                                   dist_type = 'daisy')
 
 
+# save data for analysis
+saveRDS(final_data, '../data/normal_distance_results.rda')
+saveRDS(final_data_daisy, '../data/daisy_distance_results.rda')
