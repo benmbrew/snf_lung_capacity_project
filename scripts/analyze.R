@@ -12,6 +12,8 @@
 # longitudinal data - variable = random effect is individual and time, fixed effect is group.
 # all variables for each group, kruskal.test() is mean fev higher in one group compared to another
 ###########
+
+# HERE - if moving forward, use the tclust package to get distance pr only use daisy (gower composite)
 library(SNFtool)
 library(tidyverse)
 library(tibble)
